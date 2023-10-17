@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define CTRL_KEY(k) ((k) & 0x1f)
+
 struct termios orig_termios;
 
 void enable_raw();
@@ -15,35 +17,35 @@ int main(int argc, char *argv[]) {
 	char c;
 	char lastc;
 	char buff[1024];
-	int k = 0;
+    int k;
 	
 	FILE *f = fopen(argv[1], "r+");
 
     do {
         c = fgetc(f);
-        buff[k] = c;
-		write(STDIN_FILENO, &buff[k], 1);
-        k++;
+		write(STDIN_FILENO, &c, 1);
     } while (c != EOF); 
 
-    k = 0;
+    int insert = 0; 
 
 	while (read(STDIN_FILENO, &c, 1) == 1) {
-		if (lastc == ':') {
+		if (lastc == ':' &&  !insert) {
 			if (c == 'q') break;
 			if (c == 'w') {
 				fprintf(f, "%s", buff);
-				printf("\tSaved!\n");
 			}
 		} else {
-			if (c != ':') {
+			if (c != ':' && insert) {
 				write(STDIN_FILENO, &c, 1);
 				buff[k] = c;
 				k++;
 			}
+
+            if (c == 'i') insert = 1;
+            if (c == CTRL_KEY('i')) insert = 0;
 		}
 
-		lastc  = c;
+		lastc = c;
 	}
 
 	fclose(f);
